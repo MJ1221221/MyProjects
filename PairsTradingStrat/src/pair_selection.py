@@ -47,6 +47,25 @@ def test_pair_cointegration(price_a: pd.Series, price_b: pd.Series):
     score, pvalue, _ = coint(price_a, price_b)
     return score, pvalue
 
+def compute_half_life(spread: pd.Series) -> float:
+    """
+    Estimates the mean-reversion half-life via an AR(1) fit on the spread:
+    spread(t) - spread(t-1) = theta * spread(t-1) + noise
+    Half-life = -ln(2) / theta. Pairs with very long or negative half-life
+    aren't tradeable on a reasonable time horizon.
+    """
+    spread_lag = spread.shift(1).dropna()
+    spread_ret = spread.diff().dropna()
+    spread_lag = spread_lag.loc[spread_ret.index]
+
+    x = add_constant(spread_lag.values)
+    model = OLS(spread_ret.values, x).fit()
+    theta = model.params[1]
+
+    if theta >= 0:
+        return np.inf  # not mean-reverting at all
+    half_life = -np.log(2) / theta
+    return half_life
 
 def find_cointegrated_pairs(price_matrix: pd.DataFrame, sectors: dict,
                              pvalue_threshold=PVALUE_THRESHOLD):
@@ -71,6 +90,13 @@ def find_cointegrated_pairs(price_matrix: pd.DataFrame, sectors: dict,
             if pvalue < pvalue_threshold:
                 hedge_ratio = compute_hedge_ratio(series_a, series_b)
                 spread = series_a - hedge_ratio * series_b
+                half_life = compute_half_life(spread)
+
+                # keep only pairs that revert on a tradeable timeframe --
+                # too fast (<2 days) is likely noise, too slow (>60 days)
+                # means capital sits idle and slippage/costs eat the edge
+                if half_life < 2 or half_life > 60:
+                    continue
                 results.append({
                     "sector": sector,
                     "ticker_a": ticker_a,

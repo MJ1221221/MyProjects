@@ -24,7 +24,7 @@ import numpy as np
 ROLLING_WINDOW = 20
 ENTRY_Z = 2.0
 EXIT_Z = 0.5
-STOP_Z = 3.0
+STOP_Z = 2.5
 MOMENTUM_WINDOW = 5
 
 

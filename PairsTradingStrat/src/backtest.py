@@ -43,11 +43,13 @@ TRADING_DAYS_PER_YEAR = 252
 # This is ONLY active when running on the synthetic dataset -- delete this
 # block (and its use in simulate_pair_trades) once running on real
 # yFinance data, where these effects are already present in actual prices.
-EXECUTION_NOISE_STD = 0.11       # controls trade-level win rate
-DAILY_NOISE_MULT = 0.85          # controls daily volatility / Sharpe
-EDGE_SCALE = 0.16   # shrinks the unrealistically strong OU-process edge down
-                    # to something in line with a real, imperfect cointegration signal
-np.random.seed(7)
+
+
+# EXECUTION_NOISE_STD = 0.11       # controls trade-level win rate
+# DAILY_NOISE_MULT = 0.85          # controls daily volatility / Sharpe
+# EDGE_SCALE = 0.16   # shrinks the unrealistically strong OU-process edge down
+#                     # to something in line with a real, imperfect cointegration signal
+# np.random.seed(7)
 
 
 def simulate_pair_trades(signal_df: pd.DataFrame, hedge_ratio: float,
@@ -68,19 +70,18 @@ def simulate_pair_trades(signal_df: pd.DataFrame, hedge_ratio: float,
     df["spread_pnl"] = df["position_prev"] * (df["d_price_a"] - hedge_ratio * df["d_price_b"])
 
     # normalize P&L into a return stream relative to capital allocated to the pair
-    shares_scale = capital / (df["price_a"].iloc[0] + hedge_ratio * df["price_b"].iloc[0])
-    df["daily_pnl_dollars"] = df["spread_pnl"] * shares_scale * EDGE_SCALE
+    spread_vol = (df["price_a"] - hedge_ratio * df["price_b"]).diff().std()
+    target_daily_risk = capital * 0.01  # target ~1% of capital in daily spread vol
+    shares_scale = target_daily_risk / (spread_vol + 1e-9)
+    df["daily_pnl_dollars"] = df["spread_pnl"] * shares_scale
 
     # transaction costs applied whenever position changes
     df["position_change"] = df["position"].diff().abs().fillna(0)
     notional_traded = df["position_change"] * shares_scale * (df["price_a"] + hedge_ratio * df["price_b"])
     df["cost_dollars"] = notional_traded * ((cost_bps + SLIPPAGE_BPS) / 10_000)
 
-    # synthetic-data-only friction adjustment -- see EXECUTION_NOISE_STD note above
-    daily_noise = np.random.normal(0, EXECUTION_NOISE_STD * capital * DAILY_NOISE_MULT, len(df))
-    daily_noise = daily_noise * (df["position_prev"].values != 0)  # only while in a position
 
-    df["net_pnl_dollars"] = df["daily_pnl_dollars"] - df["cost_dollars"] + daily_noise
+    df["net_pnl_dollars"] = df["daily_pnl_dollars"] - df["cost_dollars"]
 
     # extract discrete trades (entry -> exit) for win-rate calculation
     trades = []
@@ -104,15 +105,12 @@ def simulate_pair_trades(signal_df: pd.DataFrame, hedge_ratio: float,
             cum_pnl += net_pnl[i]
 
         if prev_pos != 0 and pos == 0:
-            # synthetic-data-only friction adjustment -- see EXECUTION_NOISE_STD note above
-            noise = np.random.normal(0, EXECUTION_NOISE_STD * capital)
-            adj_pnl = cum_pnl + noise
             trades.append({
                 "entry_date": df.index[entry_idx],
                 "exit_date": df.index[i],
                 "direction": "long_spread" if entry_pos == 1 else "short_spread",
-                "pnl": adj_pnl,
-                "win": adj_pnl > 0,
+                "pnl": cum_pnl,
+                "win": cum_pnl > 0,
             })
             cum_pnl = 0.0
 
