@@ -66,7 +66,7 @@ regimes to check robustness.
 
 ## ⚠️ Note on the data used for the results above
 
-This sandbox environment I (Claude) built this in has a restricted network
+This sandbox environment I built this in has a restricted network
 allowlist that doesn't include Yahoo Finance's servers, so I could not
 actually call the live `yfinance` API here. `data_pipeline.py` is written
 to do exactly that and **will work as-is on a normal machine** (e.g. your
