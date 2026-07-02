@@ -20,10 +20,18 @@ import yfinance as yf
 # hold (and persist) between companies exposed to similar fundamentals.
 # ---------------------------------------------------------------------------
 UNIVERSE = {
-    "Financials": ["JPM", "BAC", "WFC", "C", "GS", "MS", "USB", "PNC", "TFC", "COF"],
-    "Energy":     ["XOM", "CVX", "COP", "SLB", "EOG", "PSX", "VLO", "MPC", "OXY", "HES"],
-    "Tech":       ["AAPL", "MSFT", "NVDA", "AMD", "INTC", "QCOM", "TXN", "AVGO", "MU", "ADI"],
-    "Retail":     ["WMT", "TGT", "COST", "HD", "LOW", "TJX", "ROST", "KR", "DG", "BBY"],
+    "Financials": ["JPM", "BAC", "WFC", "C", "GS", "MS", "USB", "PNC", "TFC", "COF",
+                   "SCHW", "BK", "STT", "FITB", "KEY", "RF", "CFG", "HBAN", "MTB", "ZION"],
+    "Energy":     ["XOM", "CVX", "COP", "SLB", "EOG", "PSX", "VLO", "MPC", "OXY", "HES",
+                   "DVN", "FANG", "BKR", "HAL", "KMI", "WMB", "OKE", "TRGP", "APA", "CTRA"],
+    "Tech":       ["AAPL", "MSFT", "NVDA", "AMD", "INTC", "QCOM", "TXN", "AVGO", "MU", "ADI",
+                   "MRVL", "ON", "SWKS", "MCHP", "TER", "KLAC", "LRCX", "AMAT", "NXPI", "ASML"],
+    "Retail":     ["WMT", "TGT", "COST", "HD", "LOW", "TJX", "ROST", "KR", "DG", "BBY",
+                   "DLTR", "BURL", "ULTA", "TSCO", "ORLY", "AZO", "GPC", "FIVE", "WSM", "M"],
+    "Healthcare": ["JNJ", "PFE", "MRK", "ABBV", "LLY", "BMY", "AMGN", "GILD", "CVS", "CI",
+                   "UNH", "HUM", "ELV", "VRTX", "REGN", "ZTS", "BDX", "SYK", "BSX", "MDT"],
+    "Industrials":["HON", "UNP", "UPS", "CAT", "DE", "BA", "LMT", "RTX", "GE", "MMM",
+                   "EMR", "ETN", "ITW", "PH", "ROK", "CMI", "PCAR", "FDX", "NSC", "CSX"],
 }
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
