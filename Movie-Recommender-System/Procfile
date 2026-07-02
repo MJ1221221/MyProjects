@@ -1,1 +1,2 @@
+release: python generate_pickles.py
 web: sh setup.sh && streamlit run app.py
