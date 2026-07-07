@@ -20,7 +20,7 @@ static void print_banner() {
     std::cout
         << "\n"
         << "+----------------------------------------------------+\n"
-        << "|  LRU-BASED MULTI-LEVEL CACHE SIMULATOR              |\n"
+        << "|  LRU-BASED MULTI-LEVEL CACHE SIMULATOR             |\n"
         << "|  Doubly Linked List | HashMap | Min-Heap | L1/L2   |\n"
         << "+----------------------------------------------------+\n\n";
 }
