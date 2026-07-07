@@ -1,11 +1,11 @@
 """
 main.py
 
-Single entry point to run the Production Scheduling Optimizer:
+Single entry point to run the Workstation Scheduling and Routing Optimizer:
     1. Run the 60-scenario benchmark (Baseline FIFO vs Simulated Annealing).
     2. Save per-scenario results to results/benchmark_results.csv.
     3. Generate a demo Gantt comparison chart, an SA convergence plot, and
-       a benchmark-wide makespan reduction histogram.
+       a benchmark-wide production lead time reduction histogram.
     4. Print a final summary report to the console.
 
 Usage:
@@ -30,12 +30,12 @@ RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Production Scheduling Optimizer for Flexible Job Shop (SA vs Baseline)"
+        description="Workstation Scheduling and Routing Optimizer for Flexible Shop Floors (SA vs Baseline)"
     )
     parser.add_argument("--scenarios", type=int, default=60,
                         help="Number of scenarios to benchmark (default: 60)")
     parser.add_argument("--disruption-ticks", type=int, default=5,
-                        help="Downtime disruption ticks simulated before solving (default: 5)")
+                        help="Shop-floor downtime ticks simulated before solving (default: 5)")
     parser.add_argument("--no-plots", action="store_true",
                         help="Skip generating plots (just run the numeric benchmark)")
     parser.add_argument("--seed", type=int, default=2026,
@@ -45,7 +45,7 @@ def main():
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     print("=" * 60)
-    print("PRODUCTION SCHEDULING OPTIMIZATION FRAMEWORK")
+    print("SHOP-FLOOR WORKSTATION SCHEDULING FRAMEWORK")
     print(f"Running benchmark across {args.scenarios} scenarios...")
     print("=" * 60 + "\n")
 
@@ -104,12 +104,12 @@ def main():
     print("\n" + "=" * 60)
     print("DONE")
     print("=" * 60)
-    print(f"Average makespan reduction         : {summary['avg_improvement_pct']}%")
-    print(f"Average baseline machine utilization: {summary['avg_baseline_utilization']}%")
-    print(f"Average optimized machine utilization: {summary['avg_sa_utilization']}%")
-    print(f"Results CSV                       : {csv_path}")
+    print(f"Average production lead time reduction  : {summary['avg_improvement_pct']}%")
+    print(f"Average baseline workstation utilization: {summary['avg_baseline_utilization']}%")
+    print(f"Average optimized workstation utilization: {summary['avg_sa_utilization']}%")
+    print(f"Results CSV                            : {csv_path}")
     if not args.no_plots:
-        print(f"Plots saved to                    : {RESULTS_DIR}/")
+        print(f"Plots saved to                         : {RESULTS_DIR}/")
 
 if __name__ == "__main__":
     main()

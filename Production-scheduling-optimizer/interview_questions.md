@@ -25,7 +25,7 @@ FJSP introduces two concurrent optimization sub-problems:
 1. **Machine Allocation**: Deciding which compatible machine should process each operation.
 2. **Operation Sequencing**: Deciding the sequence of operations on each machine to avoid double-bookings and minimize idle time.
 
-This project implements a **dynamic FJSP** with sequence-dependent setup times and random downtime disruptions.
+This project implements a **dynamic FJSP** with sequence-dependent changeover times and random downtime disruptions.
 
 ### Q2. Why is FJSP considered NP-hard?
 **Answer:**
@@ -49,13 +49,13 @@ Minimizing makespan is the primary objective in production scheduling because it
 
 ## 2. Scheduling Mechanics Questions
 
-### Q4. What are sequence-dependent setup times, and why do they matter?
+### Q4. What are sequence-dependent changeover times, and why do they matter?
 **Answer:**
-Sequence-dependent setup times occur when the preparation time (setup overhead) on a machine depends on both the job family currently on the machine and the job family being transitioned to.
+Sequence-dependent changeover times occur when the preparation time (changeover overhead) on a machine depends on both the job family currently on the machine and the job family being transitioned to.
 - *Example*: In plastic injection molding, transitioning from a black plastic run to a white plastic run requires extensive cleaning (purge time) to prevent color contamination, whereas transitioning from white to black requires minimal cleanup.
-- *In this project*: We model job families (e.g. `'Gear'`, `'Shaft'`, `'Bracket'`). When a machine finishes an operation of a `'Shaft'` and transitions to a `'Gear'`, we look up the setup matrix: `setup_matrix['Shaft']['Gear']` and insert that downtime block into the machine's timeline *before* starting the new operation.
+- *In this project*: We model job families (e.g. `'Gear'`, `'Shaft'`, `'Bracket'`). When a machine finishes an operation of a `'Shaft'` and transitions to a `'Gear'`, we look up the changeover matrix: `changeover_matrix['Shaft']['Gear']` and insert that downtime block into the machine's timeline *before* starting the new operation.
 
-Ignoring setup times leads to schedules that are physically infeasible or suffer from massive unexpected bottlenecks when deployed on a real shop floor.
+Ignoring changeover times leads to schedules that are physically infeasible or suffer from massive unexpected bottlenecks when deployed on a real shop floor.
 
 ### Q5. What is an "Active Schedule" and how does the list-based scheduling decoder work?
 **Answer:**
@@ -65,10 +65,10 @@ We build active schedules using a **list-based scheduling decoder** (`evaluate_s
 2. We iterate through the priority sequence. For each operation:
    - Determine its greedily/assigned machine.
    - Find the completion time of the job's previous operation ($t_{job\_ready}$).
-   - Search the machine's schedule to find the earliest start time $t \ge t_{job\_ready}$ that fits the operation's duration and respects the sequence-dependent setup times with both its predecessor and successor on that machine.
+   - Search the machine's schedule to find the earliest start time $t \ge t_{job\_ready}$ that fits the operation's duration and respects the sequence-dependent changeover times with both its predecessor and successor on that machine.
    - Insert the operation block, shifting subsequent ready times.
 
-This active scheduling search guarantees that we automatically fill gaps (left by breakdowns or setup transitions) whenever possible.
+This active scheduling search guarantees that we automatically fill gaps (left by breakdowns or changeover transitions) whenever possible.
 
 ---
 
@@ -136,7 +136,7 @@ In the benchmark outputs, we track and report the bottleneck machine ID for both
 Reducing makespan by **16%** and improving machine utilization from **74% to 83%** yields direct financial benefits:
 1. **Increased Throughput**: Producing more parts per shift without capital investment in new machines.
 2. **Reduced Work-In-Progress (WIP)**: Better sequencing reduces the time parts sit in intermediate queues on the shop floor.
-3. **Decreased Setup Overhead**: Sequence-dependent grouping minimizes time wasted on non-productive machine reconfigurations.
+3. **Decreased Changeover Overhead**: Sequence-dependent grouping minimizes time wasted on non-productive machine reconfigurations.
 4. **Resiliency**: The ability to quickly re-optimize schedules in under 0.2 seconds when a machine breaks down prevents shop-floor chaos and maintains delivery commitments.
 
 ---
@@ -214,7 +214,7 @@ The optimal T₀ is problem-specific. I computed it by measuring the average cos
 ### Q20. How do you know your solutions are good if you can't find the true optimum?
 **Answer:**
 Three validation strategies:
-1. **Lower bound comparison**: Relax the problem (e.g., remove setup times, assume infinite machines, ignore precedence). The relaxed makespan is a theoretical lower bound. If SA is within 5–10% of this bound, the solution is strong.
+1. **Lower bound comparison**: Relax the problem (e.g., remove changeover times, assume infinite machines, ignore precedence). The relaxed makespan is a theoretical lower bound. If SA is within 5–10% of this bound, the solution is strong.
 2. **Small-instance verification**: Generate tiny problems (3 jobs, 2 machines) that can be solved to optimality with brute force or MILP. Verify SA matches the optimal makespan on these.
 3. **Replication across scenarios**: Running 60 diverse scenarios reduces the chance that results are lucky. The consistency of improvement (low standard deviation) builds confidence.
 In this project, the mean improvement of 16% with a standard deviation of ~4% across 60 scenarios confirms the framework reliably outperforms the baseline.
@@ -286,7 +286,7 @@ The framework handles this naturally:
 ### Q28. What if two operations have identical processing times on all machines — does the solver still find a unique assignment?
 **Answer:**
 Yes, because:
-1. **Setup times break symmetry**: Even if processing times are identical, predecessor/successor job types on each machine create different setup cost profiles, making one machine preferable.
+1. **Changeover times break symmetry**: Even if processing times are identical, predecessor/successor job types on each machine create different changeover cost profiles, making one machine preferable.
 2. **Tie-breaking in baseline**: The `find_earliest_start` function returns the first valid start time. If two machines finish simultaneously, the one iterated first (lowest machine ID) is chosen by default.
 3. **SA random exploration**: The reallocation neighbor move randomly re-assigns operations to other eligible machines, so SA will explore different allocations even with symmetric costs.
 
@@ -342,7 +342,7 @@ Minimize: C_max
 Subject to:
 1. Each operation assigned to one machine: Σ_m X_{ijm} = 1 ∀i,j
 2. Precedence: S_{i(j+1)} ≥ S_{ij} + Σ_m p_{ijm}·X_{ijm} ∀i,j
-3. No overlap on same machine (disjunctive): S_{kl} ≥ S_{ij} + p_{ijm} + setup_{type(i),type(k)} − M·(3 − X_{ijm} − X_{klm} − Y_{ijkl}) and vice versa
+3. No overlap on same machine (disjunctive): S_{kl} ≥ S_{ij} + p_{ijm} + changeover_{type(i),type(k)} − M·(3 − X_{ijm} − X_{klm} − Y_{ijkl}) and vice versa
 4. Makespan: C_max ≥ S_{ij} + Σ_m p_{ijm}·X_{ijm} ∀i,j
 
 This MILP can only solve tiny instances (<10 jobs) — which is exactly why metaheuristics like SA are needed for real factories.
@@ -414,11 +414,11 @@ Changes needed for production deployment:
 **Answer:**
 The **active schedule decoder** (`find_earliest_start` in `baseline_solver.py:9-69`) was the most challenging. It must:
 - Find the earliest slot on a machine that satisfies operation duration
-- Respect setup times with both the predecessor AND successor on that machine
+- Respect changeover times with both the predecessor AND successor on that machine
 - Handle breakdown blocks already placed on the timeline
 - Not violate job precedence (operation j+1 can't start before operation j)
 - Do all this in O(M) time per operation
-Getting the successor setup logic correct was subtle — when inserting a new operation into a gap, you must ensure it doesn't compress the setup needed before the *next* operation. I iterated through three versions before the gap insertion logic was correct.
+Getting the successor changeover logic correct was subtle — when inserting a new operation into a gap, you must ensure it doesn't compress the changeover needed before the *next* operation. I iterated through three versions before the gap insertion logic was correct.
 
 ### Q40. What would you do differently if you started the project today?
 **Answer:**
@@ -459,16 +459,16 @@ Temperature controls the probability of accepting worse solutions. High T → hi
 3. **Monotonicity test**: The best-so-far makespan should never increase.
 4. **Neighbor validity test**: All neighbor moves must produce a feasible schedule (no precedence violations, no machine overlaps).
 
-### Q47. Explain the "sequence-dependent setup" concept with a concrete example.
+### Q47. Explain the "sequence-dependent changeover" concept with a concrete example.
 **Answer:**
 On an injection molding machine:
-- Switching from **black plastic → black plastic**: Setup = 0 min (same material, no cleaning needed).
-- Switching from **black plastic → white plastic**: Setup = 20 min (must purge all black residue to prevent contamination).
-- Switching from **white plastic → black plastic**: Setup = 5 min (minimal purge, black hides any residue).
+- Switching from **black plastic → black plastic**: Changeover = 0 min (same material, no cleaning needed).
+- Switching from **black plastic → white plastic**: Changeover = 20 min (must purge all black residue to prevent contamination).
+- Switching from **white plastic → black plastic**: Changeover = 5 min (minimal purge, black hides any residue).
 On a CNC machining center:
-- Switching from **aluminum → aluminum**: Setup = 0 min (same tooling and fixturing).
-- Switching from **aluminum → steel**: Setup = 15 min (change cutting tools, adjust speeds/feeds, different coolant).
-- Switching from **steel → aluminum**: Setup = 10 min (remove heavy tooling, change fixtures).
+- Switching from **aluminum → aluminum**: Changeover = 0 min (same tooling and fixturing).
+- Switching from **aluminum → steel**: Changeover = 15 min (change cutting tools, adjust speeds/feeds, different coolant).
+- Switching from **steel → aluminum**: Changeover = 10 min (remove heavy tooling, change fixtures).
 
 ### Q48. What is the main difference between "job shop" and "flow shop"?
 **Answer:**
@@ -479,8 +479,8 @@ On a CNC machining center:
 **Answer:**
 Actual factory utilization varies widely:
 - Capital-intensive industries (semiconductor fabs, paper mills): 85–95% — machines cost millions, so keeping them busy is critical.
-- Job shops / custom manufacturing: 50–75% — high mix, low volume, frequent setups, and waiting for materials naturally lower utilization.
-- Our 62% baseline is realistic for a lightly-loaded job shop. The improvement to 75%+ shows the optimizer consolidates work and reduces idle gaps without adding overtime or new machines.
+- Job shops / custom manufacturing: 50–75% — high mix, low volume, frequent changeovers, and waiting for materials naturally lower utilization.
+- Our 62% baseline is realistic for a lightly-loaded job shop. The improvement to 75%+ shows the optimizer consolidates work and reduces idle gaps without adding overtime or new workstations.
 
 ### Q50. How would you present this project to a non-technical hiring manager?
 **Answer:**

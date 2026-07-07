@@ -2,7 +2,7 @@
 sa_optimizer.py
 
 Simulated Annealing (SA) optimizer for the Flexible Job Shop Scheduling Problem (FJSP).
-Solves the joint sequencing and machine allocation problem.
+Optimizes the joint routing sequence and workstation allocation on the shop floor.
 """
 
 import math
@@ -84,8 +84,8 @@ def solve_sa_schedule(scenario, baseline_solution,
                       max_iterations: int = 15000,
                       seed: int = None):
     """
-    Optimize schedule using Simulated Annealing.
-    Seeded from baseline_solution.
+    Optimize workstation schedules using Simulated Annealing.
+    Seeded from the greedy baseline dispatch solution.
     """
     if seed is not None:
         random.seed(seed)

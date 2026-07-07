@@ -1,11 +1,11 @@
 """
 benchmark.py
 
-Runs the benchmark across 60 production scheduling scenarios:
-    1. Generates 60 test instances (varying size tiers).
-    2. Simulates shop floor disruptions (breakdowns and efficiency drifts) for 5 ticks.
+Runs the benchmark across 60 workstation scheduling scenarios:
+    1. Generates 60 production routing scenarios (varying size tiers).
+    2. Simulates shop floor disruptions (breakdowns and performance drift) for 5 ticks.
     3. Solves the live scenario snapshot with a greedy baseline (FIFO) and Simulated Annealing.
-    4. Records and logs performance metrics: makespan, utilization, bottlenecks, and times.
+    4. Records and logs performance metrics: lead times, workstation utilization, bottlenecks, and times.
     5. Saves the results to a CSV file.
 """
 
@@ -21,7 +21,7 @@ from sa_optimizer import solve_sa_schedule
 
 def run_single_scenario(scenario, disruption_ticks=5, sa_params=None, seed=None):
     """
-    Evaluate one scenario under dynamic disruptions with both baseline and SA solvers.
+    Evaluate one scenario under dynamic shop-floor disruptions with both baseline and SA schedulers.
     """
     # 1. Run simulation ticks to create dynamic disruptions (breakdowns and drift)
     sim = DisruptionSimulator(scenario, seed=seed)
@@ -95,13 +95,13 @@ def run_benchmark(num_scenarios: int = 60, disruption_ticks: int = 5,
         
         if verbose:
             print(f"[{i+1:>2}/{num_scenarios}] jobs={res['num_jobs']:>2} "
-                  f"machines={res['num_machines']} "
+                  f"workstations={res['num_machines']} "
                   f"breakdowns={res['active_breakdowns']} | "
-                  f"baseline_ms={res['baseline_makespan']:>6.1f} "
-                  f"sa_ms={res['sa_makespan']:>6.1f} | "
-                  f"improvement={res['makespan_improvement_pct']:>5.1f}% | "
+                  f"leadtime_base={res['baseline_makespan']:>6.1f} "
+                  f"leadtime_opt={res['sa_makespan']:>6.1f} | "
+                  f"reduction={res['makespan_improvement_pct']:>5.1f}% | "
                   f"util_base={res['baseline_utilization']:>5.1f}% "
-                  f"util_sa={res['sa_utilization']:>5.1f}%")
+                  f"util_opt={res['sa_utilization']:>5.1f}%")
 
     # Aggregate performance metrics
     improvements = [r['makespan_improvement_pct'] for r in results]

@@ -3,9 +3,9 @@ visualize.py
 
 Plotting and visualization utilities for the Production Scheduling Optimizer:
     1. plot_gantt_comparison -- side-by-side Gantt charts showing Baseline vs SA schedules,
-                                highlighting machine allocations, sequence setup times, and breakdowns.
-    2. plot_convergence      -- plot SA's makespan convergence curve over iterations.
-    3. plot_benchmark_summary-- plot a histogram of makespan improvements across scenarios.
+                                highlighting workstation allocations, sequence changeover times, and downtime.
+    2. plot_convergence      -- plot SA's production lead time convergence curve over iterations.
+    3. plot_benchmark_summary-- plot a histogram of production lead time reductions across scenarios.
 """
 
 import os
@@ -22,11 +22,11 @@ def plot_gantt(machine_schedules, title, save_path=None, ax=None):
     # Define color palette for jobs
     colors = plt.get_cmap('tab20')
     
-    # Machine labels
+    # Workstation labels
     machines = sorted(machine_schedules.keys())
     y_ticks = range(len(machines))
     ax.set_yticks(y_ticks)
-    ax.set_yticklabels([f"Machine {m}" for m in machines])
+    ax.set_yticklabels([f"Workstation {m}" for m in machines])
     
     # Process blocks
     for m_idx, m in enumerate(machines):
@@ -52,7 +52,7 @@ def plot_gantt(machine_schedules, title, save_path=None, ax=None):
                     ax.text(start + dur/2, m_idx, f"J{j_id}", ha='center', va='center', 
                             fontsize=9, color='black', fontweight='semibold')
 
-    ax.set_xlabel("Time (minutes)", fontsize=10)
+    ax.set_xlabel("Production Time (mins)", fontsize=10)
     ax.set_ylabel("Workstations", fontsize=10)
     ax.set_title(title, fontsize=12, fontweight='bold')
     ax.grid(axis='x', linestyle='--', alpha=0.5)
@@ -73,13 +73,13 @@ def plot_gantt_comparison(baseline_schedule, sa_schedule, save_path):
     
     plot_gantt(
         baseline_schedule['machine_schedules'], 
-        f"Baseline Schedule (FIFO) | Makespan: {baseline_schedule['makespan']} mins", 
+        f"Greedy Baseline Sequencing (FIFO) | Lead Time: {baseline_schedule['makespan']} mins", 
         ax=axes[0]
     )
     
     plot_gantt(
         sa_schedule['machine_schedules'], 
-        f"Optimized Schedule (Simulated Annealing) | Makespan: {sa_schedule['makespan']} mins", 
+        f"Optimized Workstation Schedule (Simulated Annealing) | Lead Time: {sa_schedule['makespan']} mins", 
         ax=axes[1]
     )
     
@@ -89,9 +89,9 @@ def plot_gantt_comparison(baseline_schedule, sa_schedule, save_path):
     plt.close(fig)
     print(f"Saved Gantt Comparison to: {save_path}")
 
-def plot_convergence(history, save_path, title="Simulated Annealing Makespan Convergence"):
+def plot_convergence(history, save_path, title="Simulated Annealing Lead Time Convergence"):
     """
-    Plot SA's makespan progress over iterations.
+    Plot SA's production lead time progress over iterations.
     """
     iterations = [h[0] for h in history]
     current_costs = [h[1] for h in history]
@@ -99,12 +99,12 @@ def plot_convergence(history, save_path, title="Simulated Annealing Makespan Con
 
     fig, ax = plt.subplots(figsize=(9, 5))
     ax.plot(iterations, current_costs, color='#a0d0a0', alpha=0.6,
-            linewidth=1, label='Current candidate makespan')
+            linewidth=1, label='Current candidate lead time')
     ax.plot(iterations, best_costs, color='#27ae60', linewidth=2.2,
-            label='Best makespan found')
+            label='Best lead time found')
     
     ax.set_xlabel('Iteration', fontsize=10)
-    ax.set_ylabel('Makespan (minutes)', fontsize=10)
+    ax.set_ylabel('Production Lead Time (mins)', fontsize=10)
     ax.set_title(title, fontsize=12, fontweight='bold')
     ax.legend(fontsize=9)
     ax.grid(alpha=0.3)
@@ -126,11 +126,11 @@ def plot_benchmark_summary(results, save_path):
     mean_val = sum(improvements) / len(improvements)
     
     ax.axvline(mean_val, color='red', linestyle='--', linewidth=2,
-               label=f'Mean Improvement = {mean_val:.2f}%')
+               label=f'Mean Reduction = {mean_val:.2f}%')
     
-    ax.set_xlabel('Makespan Reduction over Baseline (%)', fontsize=10)
+    ax.set_xlabel('Production Lead Time Reduction over Baseline (%)', fontsize=10)
     ax.set_ylabel('Number of Scenarios', fontsize=10)
-    ax.set_title(f'Makespan Reduction Distribution across {len(results)} Test Scenarios', 
+    ax.set_title(f'Lead Time Reduction Distribution across {len(results)} Test Scenarios', 
                  fontsize=12, fontweight='bold')
     ax.legend(fontsize=9)
     ax.grid(alpha=0.3)

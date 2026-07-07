@@ -2,11 +2,11 @@
 baseline_solver.py
 
 Baseline heuristic solver for the Flexible Job Shop Scheduling Problem (FJSP).
-This solver uses priority dispatching rules (FIFO or Shortest Processing Time)
-and greedily assigns operations to the machine that can finish them the earliest.
+This solver uses greedy shop-floor dispatching rules (FIFO or Shortest Processing Time)
+and routes operations to the workstation that can complete them the earliest.
 """
 
-def find_earliest_start(machine_schedule, job_ready_time, duration, job_type, setup_matrix):
+def find_earliest_start(machine_schedule, job_ready_time, duration, job_type, changeover_matrix):
     """
     Find the earliest valid start time t >= job_ready_time for an operation
     of job_type with duration, on a machine with machine_schedule.
@@ -17,10 +17,10 @@ def find_earliest_start(machine_schedule, job_ready_time, duration, job_type, se
     # 1. Right when the job is ready
     candidates = [job_ready_time]
     
-    # 2. Right after any existing block ends (including setup)
+    # 2. Right after any existing block ends (including changeover)
     for _, end_b, _, j_type in machine_schedule:
-        setup = 0.0 if j_type == 'Breakdown' else setup_matrix[j_type][job_type]
-        candidates.append(end_b + setup)
+        changeover = 0.0 if j_type == 'Breakdown' else changeover_matrix[j_type][job_type]
+        candidates.append(end_b + changeover)
         
     candidates = sorted(list(set(c for c in candidates if c >= job_ready_time)))
     
@@ -33,27 +33,27 @@ def find_earliest_start(machine_schedule, job_ready_time, duration, job_type, se
                 valid = False
                 break
             
-            # Predecessor setup check: if this block ends at or before t
+            # Predecessor changeover check: if this block ends at or before t
             if end_b <= t:
                 # Is it the immediate predecessor?
                 other_between = any(end_o <= t and start_o >= end_b 
                                     for start_o, end_o, _, _ in machine_schedule 
                                     if (start_o, end_o) != (start_b, end_b))
                 if not other_between:
-                    setup = 0.0 if j_type == 'Breakdown' else setup_matrix[j_type][job_type]
-                    if t < end_b + setup:
+                    changeover = 0.0 if j_type == 'Breakdown' else changeover_matrix[j_type][job_type]
+                    if t < end_b + changeover:
                         valid = False
                         break
                         
-            # Successor setup check: if this block starts at or after t + duration
+            # Successor changeover check: if this block starts at or after t + duration
             if start_b >= t + duration:
                 # Is it the immediate successor?
                 other_between = any(start_o >= t + duration and end_o <= start_b 
                                     for start_o, end_o, _, _ in machine_schedule 
                                     if (start_o, end_o) != (start_b, end_b))
                 if not other_between:
-                    setup = 0.0 if j_type == 'Breakdown' else setup_matrix[job_type][j_type]
-                    if t + duration + setup > start_b:
+                    changeover = 0.0 if j_type == 'Breakdown' else changeover_matrix[job_type][j_type]
+                    if t + duration + changeover > start_b:
                         valid = False
                         break
         if valid:
@@ -64,8 +64,8 @@ def find_earliest_start(machine_schedule, job_ready_time, duration, job_type, se
         last_block = machine_schedule[-1]
         last_end = last_block[1]
         last_type = last_block[3]
-        setup = 0.0 if last_type == 'Breakdown' else setup_matrix[last_type][job_type]
-        return max(job_ready_time, last_end + setup)
+        changeover = 0.0 if last_type == 'Breakdown' else changeover_matrix[last_type][job_type]
+        return max(job_ready_time, last_end + changeover)
     return job_ready_time
 
 def evaluate_schedule(ops_sequence, machine_assignments, scenario):
@@ -78,13 +78,13 @@ def evaluate_schedule(ops_sequence, machine_assignments, scenario):
                       For FJSP, job_id appears in the list as many times as it has operations.
                       E.g., [0, 1, 0, 1] means Job 0 Op 0, Job 1 Op 0, Job 0 Op 1, Job 1 Op 1.
         machine_assignments: dict mapping (job_id, op_idx) -> machine_id.
-        scenario: dict containing jobs, setup_matrix, machines, and active_breakdowns.
+        scenario: dict containing jobs, changeover_matrix, machines, and active_breakdowns.
 
     Returns:
         schedule: dict with 'makespan', 'machine_schedules', 'job_completion_times', etc.
     """
     machines = scenario['machines']
-    setup_matrix = scenario['setup_matrix']
+    changeover_matrix = scenario['changeover_matrix']
     jobs = scenario['jobs']
     
     # Initialize machine schedules with any active breakdowns as dummy blocks
@@ -126,7 +126,7 @@ def evaluate_schedule(ops_sequence, machine_assignments, scenario):
             ready_time, 
             base_dur, 
             job['job_type'], 
-            setup_matrix
+            changeover_matrix
         )
         
         end_time = start_time + base_dur
@@ -156,8 +156,8 @@ def evaluate_schedule(ops_sequence, machine_assignments, scenario):
         productive_time = 0.0
         for start, end, j_id, j_type in machine_schedules[m]:
             if j_id != -1:  # Not breakdown
-                # Subtract setup if we want pure processing time, 
-                # here we just count job duration (which includes no setup in itself, setup is just gap)
+                # Subtract changeover if we want pure processing time, 
+                # here we just count job duration (which includes no changeover in itself, changeover is just gap)
                 productive_time += (end - start)
         machine_utilization[m] = round((productive_time / makespan * 100), 2) if makespan > 0 else 0.0
         
@@ -178,9 +178,9 @@ def evaluate_schedule(ops_sequence, machine_assignments, scenario):
 
 def solve_baseline_schedule(scenario, rule='FIFO'):
     """
-    Solve the FJSP using a baseline priority rule:
+    Solve the FJSP using a baseline shop-floor sequencing rule:
     1. Determine operation priority sequence based on rule (FIFO or SPT).
-    2. Assign each operation greedily to the eligible machine that can finish it earliest.
+    2. Assign each operation greedily to the eligible workstation that can complete it earliest.
     """
     jobs = scenario['jobs']
     machines = scenario['machines']
@@ -239,7 +239,7 @@ def solve_baseline_schedule(scenario, rule='FIFO'):
                 ready_time, 
                 dur, 
                 job['job_type'], 
-                scenario['setup_matrix']
+                scenario['changeover_matrix']
             )
             finish = start + dur
             if finish < best_finish:

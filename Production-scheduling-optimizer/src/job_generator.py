@@ -7,9 +7,9 @@ In a Flexible Job Shop Scheduling Problem (FJSP):
     - Machines   = resources capable of processing specific tasks/operations.
     - Jobs       = products to be manufactured, each with an ordered list of operations.
     - Operations = individual tasks requiring a compatible machine and processing time.
-    - Job Types  = product families (e.g., 'Gear', 'Shaft', 'Bracket') that define setup times.
-    - Setup Time = sequence-dependent time required to reconfigure a machine when transitioning
-                   between different job types.
+    - Job Types  = product families (e.g., 'Gear', 'Shaft', 'Bracket') that define changeover times.
+    - Changeover Time = sequence-dependent time required to reconfigure a machine/workstation
+                   when transitioning between different product families (job types).
 """
 
 import random
@@ -18,10 +18,10 @@ import math
 # Define default job families
 JOB_TYPES = ["Gear", "Shaft", "Bracket", "Housing"]
 
-def generate_setup_matrix(types=None, min_setup=1.0, max_setup=4.0, seed=None):
+def generate_changeover_matrix(types=None, min_changeover=1.0, max_changeover=4.0, seed=None):
     """
-    Generate a sequence-dependent setup time matrix between job types.
-    Transitioning from type A to type B on any machine incurs a setup cost (time).
+    Generate a sequence-dependent changeover time matrix between job types.
+    Transitioning from type A to type B on any machine incurs a changeover cost (time).
     """
     if seed is not None:
         random.seed(seed)
@@ -29,14 +29,14 @@ def generate_setup_matrix(types=None, min_setup=1.0, max_setup=4.0, seed=None):
     if types is None:
         types = JOB_TYPES
         
-    setup_matrix = {t1: {} for t1 in types}
+    changeover_matrix = {t1: {} for t1 in types}
     for t1 in types:
         for t2 in types:
             if t1 == t2:
-                setup_matrix[t1][t2] = 0.0  # No setup required if job types are identical
+                changeover_matrix[t1][t2] = 0.0  # No changeover required if job types are identical
             else:
-                setup_matrix[t1][t2] = round(random.uniform(min_setup, max_setup), 1)
-    return setup_matrix
+                changeover_matrix[t1][t2] = round(random.uniform(min_changeover, max_changeover), 1)
+    return changeover_matrix
 
 def generate_scheduling_problem(num_jobs: int, num_machines: int, seed: int = None):
     """
@@ -48,13 +48,13 @@ def generate_scheduling_problem(num_jobs: int, num_machines: int, seed: int = No
         seed: RNG seed for reproducibility.
 
     Returns:
-        scenario: dict containing 'machines', 'job_types', 'setup_matrix', 'jobs'
+        scenario: dict containing 'machines', 'job_types', 'changeover_matrix', 'jobs'
     """
     if seed is not None:
         random.seed(seed)
 
     machines = list(range(num_machines))
-    setup_matrix = generate_setup_matrix(JOB_TYPES, seed=seed)
+    changeover_matrix = generate_changeover_matrix(JOB_TYPES, seed=seed)
 
     jobs = {}
     for job_id in range(num_jobs):
@@ -89,7 +89,7 @@ def generate_scheduling_problem(num_jobs: int, num_machines: int, seed: int = No
     return {
         'machines': machines,
         'job_types': JOB_TYPES,
-        'setup_matrix': setup_matrix,
+        'changeover_matrix': changeover_matrix,
         'jobs': jobs
     }
 
@@ -124,7 +124,7 @@ def generate_test_suite(num_scenarios: int = 60, seed_offset: int = 2000):
             'num_jobs': num_jobs,
             'num_machines': num_machines,
             'machines': scenario_data['machines'],
-            'setup_matrix': scenario_data['setup_matrix'],
+            'changeover_matrix': scenario_data['changeover_matrix'],
             'jobs': scenario_data['jobs'],
         })
 

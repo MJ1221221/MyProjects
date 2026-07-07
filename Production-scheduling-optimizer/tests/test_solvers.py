@@ -1,8 +1,8 @@
 """
 test_solvers.py
 
-Lightweight sanity tests for the Production Scheduling Optimizer's core logic.
-Validates schedule correctness, precedence constraints, machine double-booking rules,
+Lightweight sanity tests for the Workstation Scheduling and Routing Optimizer's core logic.
+Validates schedule correctness, precedence constraints, workstation conflict rules,
 and Simulated Annealing optimizer performance.
 
 Run with:

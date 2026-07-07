@@ -1,14 +1,14 @@
 """
 disruption_simulator.py
 
-Simulates shop-floor dynamics for the Production Scheduling Optimizer.
-This module makes the scheduling environment dynamic and stochastic.
-In a real factory:
-    1. Machine efficiency fluctuates due to tool wear, thermal expansion, or operator fatigue.
-    2. Machines experience unexpected breakdowns (downtimes) requiring repairs.
+Simulates dynamic shop-floor disruptions for the workstation scheduling system.
+This module introduces stochastic factory-floor variations to model realistic conditions.
+In an actual manufacturing shop-floor:
+    1. Workstation efficiency fluctuates due to tool wear, thermal drift, or operator fatigue.
+    2. Workstations experience unexpected breakdowns resulting in unplanned downtime.
 
-The simulator tracks these states and provides a snapshot of the actual conditions
-for the solvers to optimize against.
+The simulator tracks these live states and provides a snapshot of the actual workstation conditions
+for the sequencing engine to optimize against.
 """
 
 import random
