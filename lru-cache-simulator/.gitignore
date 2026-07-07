@@ -1,0 +1,17 @@
+# Compiled binaries
+cache_sim
+cache_sim.exe
+*.o
+*.obj
+
+# Build directories
+build/
+out/
+
+# IDE / editor
+.vscode/
+.idea/
+*.user
+
+# macOS
+.DS_Store
