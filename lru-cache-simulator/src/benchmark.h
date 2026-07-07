@@ -1,27 +1,5 @@
-/*
- * benchmark.h
- *
- * Benchmarking harness for the multi-level cache.
- *
- * Three access patterns:
- *
- *   SEQUENTIAL  – keys 0,1,2,...,N-1,0,1,... in strict order.
- *                 Worst case for LRU: early keys are already evicted
- *                 by the time we loop back. Lowest hit rate.
- *
- *   RANDOM      – keys chosen uniformly at random from [0, num_unique_keys).
- *                 Moderate hit rate.
- *
- *   HOTSPOT     – 80% of accesses hit the top 20% of keys (Zipfian model).
- *                 Mirrors real workloads (hot DB rows, popular pages).
- *                 Highest hit rate.
- *
- * Workflow:
- *   1. Warm the cache (insert all keys once) so we don't measure cold-start.
- *   2. Reset stats.
- *   3. Execute the access sequence (mix of GETs and PUTs per write_ratio).
- *   4. Return a BenchmarkResult.
- */
+// Benchmarking harness for the multi-level cache.
+// Three access patterns: Sequential, Random, Hotspot (80/20 Zipfian)
 
 #pragma once
 
@@ -45,23 +23,19 @@ static const char* pattern_name(AccessPattern p) {
     return "Unknown";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  BenchmarkConfig
-// ─────────────────────────────────────────────────────────────────────────────
+// BenchmarkConfig
 struct BenchmarkConfig {
     int           num_operations  = 1000;
     int           num_unique_keys = 200;
     int           l1_capacity     = 20;
     int           l2_capacity     = 80;
-    double        write_ratio     = 0.30;   // fraction of ops that are PUT
-    long long     ttl_ms          = 0;      // 0 = never expires
+    double      write_ratio     = 0.30;
+    long long     ttl_ms          = 0;
     AccessPattern pattern         = AccessPattern::RANDOM;
     int           seed            = 42;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  BenchmarkResult
-// ─────────────────────────────────────────────────────────────────────────────
+// BenchmarkResult
 struct BenchmarkResult {
     std::string pattern_name;
     int         total_ops;
@@ -72,14 +46,12 @@ struct BenchmarkResult {
     int         misses;
     double      hit_rate_pct;       // (l1_hits + l2_hits) / reads * 100
     double      l1_hit_rate_pct;    // l1_hits / reads * 100
-    int         l1_evictions;       // L1 overflows → demoted to L2
-    int         l2_evictions;       // L2 overflows → permanently lost
+    int         l1_evictions;
+    int         l2_evictions;
     long long   duration_us;        // wall-clock time in microseconds
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  BenchmarkRunner
-// ─────────────────────────────────────────────────────────────────────────────
+// BenchmarkRunner
 class BenchmarkRunner {
 public:
 
@@ -88,12 +60,12 @@ public:
         std::mt19937 rng(cfg.seed);
         std::uniform_real_distribution<double> coin(0.0, 1.0);
 
-        // ── Warm start: pre-populate all keys ────────────────────────
+        // Warm start - pre-populate all keys
         for (int i = 0; i < cfg.num_unique_keys; i++)
             cache.put("key_" + std::to_string(i), "val_" + std::to_string(i));
         cache.reset_stats();   // only measure the workload below
 
-        // ── Build access sequence ─────────────────────────────────────
+        // Build access sequence
         std::vector<std::string> seq;
         seq.reserve(cfg.num_operations);
 
@@ -129,7 +101,7 @@ public:
             }
         }
 
-        // ── Execute workload ──────────────────────────────────────────
+        // Execute workload
         int reads = 0, writes = 0;
         auto t0 = std::chrono::high_resolution_clock::now();
 
@@ -147,7 +119,7 @@ public:
         auto t1      = std::chrono::high_resolution_clock::now();
         long long us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
 
-        // ── Collect stats ─────────────────────────────────────────────
+        // Collect stats
         const auto& s1 = cache.l1().stats();
         const auto& s2 = cache.l2().stats();
         int l1h  = cache.l1_hits();
@@ -195,16 +167,14 @@ public:
     static void run_all(int l1_cap = 20, int l2_cap = 80,
                         int ops = 1000, int keys = 200) {
         std::cout
-            << "\n╔══════════════════════════════════════════════════════════╗\n"
-            << "║         LRU MULTI-LEVEL CACHE -- BENCHMARK SUITE         ║\n"
-            << "╠══════════════════════════════════════════════════════════╣\n"
-            << "║  L1 capacity = " << std::setw(4) << l1_cap
-            << "   L2 capacity = " << std::setw(4) << l2_cap
-            << "                  ║\n"
-            << "║  Operations  = " << std::setw(4) << ops
-            << "   Key space   = " << std::setw(4) << keys
-            << "                  ║\n"
-            << "╚══════════════════════════════════════════════════════════╝\n";
+            << "\n+---------------------------------------------+\n"
+            << "| LRU MULTI-LEVEL CACHE -- BENCHMARK SUITE     |\n"
+            << "+---------------------------------------------+\n"
+            << "| L1 capacity = " << std::setw(4) << l1_cap
+            << " L2 capacity = " << std::setw(4) << l2_cap << " |\n"
+            << "| Operations  = " << std::setw(4) << ops
+            << " Key space   = " << std::setw(4) << keys << " |\n"
+            << "+---------------------------------------------+\n";
 
         for (auto pat : { AccessPattern::SEQUENTIAL,
                           AccessPattern::RANDOM,

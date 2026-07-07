@@ -1,22 +1,4 @@
-/*
- * main.cpp
- *
- * Entry point — interactive CLI for the LRU Multi-Level Cache Simulator.
- *
- * Menu:
- *   1. Benchmark        – runs all 3 access patterns, prints stats
- *   2. Custom Benchmark – you pick L1/L2 sizes, ops, key-space, pattern
- *   3. Interactive Mode – type put/get commands manually
- *   4. TTL Expiry Demo  – watch an entry expire after its TTL elapses
- *   5. Exit
- *
- * Compile (requires GCC 7+ or Clang 5+ with C++17):
- *   g++ -std=c++17 -O2 main.cpp -o cache_sim
- *
- * Run:
- *   ./cache_sim        (Linux / macOS)
- *   cache_sim.exe      (Windows)
- */
+// Entry point - interactive CLI for the LRU Multi-Level Cache Simulator
 
 #include <iostream>
 #include <sstream>
@@ -37,21 +19,13 @@ static void flush_cin() {
 static void print_banner() {
     std::cout
         << "\n"
-        << "╔══════════════════════════════════════════════════════════════╗\n"
-        << "║         LRU-BASED MULTI-LEVEL CACHE SIMULATOR                ║\n"
-        << "║                                                              ║\n"
-        << "║  Data structures inside:                                     ║\n"
-        << "║    Doubly Linked List  →  O(1) move-to-front & eviction      ║\n"
-        << "║    HashMap             →  O(1) key lookup                    ║\n"
-        << "║    Min-Heap            →  O(log n) TTL expiry                ║\n"
-        << "║    L1 / L2 hierarchy   →  promotion & demotion               ║\n"
-        << "╚══════════════════════════════════════════════════════════════╝\n\n";
+        << "+----------------------------------------------------+\n"
+        << "|  LRU-BASED MULTI-LEVEL CACHE SIMULATOR              |\n"
+        << "|  Doubly Linked List | HashMap | Min-Heap | L1/L2   |\n"
+        << "+----------------------------------------------------+\n\n";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Menu option 3 — Interactive mode
-//  Commands:  put <key> <value> [ttl_ms]  |  get <key>  |  stats  |  quit
-// ─────────────────────────────────────────────────────────────────────────────
+// Menu option 3 - Interactive mode
 static void interactive_mode() {
     std::cout << "\n  Enter L1 capacity (e.g. 5): ";
     int l1_cap = 5; std::cin >> l1_cap; flush_cin();
@@ -100,7 +74,7 @@ static void interactive_mode() {
             if (key.empty()) { std::cout << "  Usage: get <key>\n"; continue; }
             auto v = cache.get(key);
             if (v.has_value())
-                std::cout << "  [HIT]  [" << key << "] = \"" << *v << "\"\n";
+                std::cout << "  [HIT] [" << key << "] = \"" << *v << "\"\n";
             else
                 std::cout << "  [MISS] [" << key << "] not found\n";
 
@@ -116,9 +90,7 @@ static void interactive_mode() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Menu option 4 — TTL Expiry Demo
-// ─────────────────────────────────────────────────────────────────────────────
+// Menu option 4 - TTL Expiry Demo
 static void ttl_demo() {
     std::cout
         << "\n  -- TTL Expiry Demo --\n"
@@ -131,41 +103,39 @@ static void ttl_demo() {
     cache.put("config",  "theme=dark",         0);
 
     auto v = cache.get("session");
-    std::cout << "  Immediate get (session): "
-              << (v ? ("\"" + *v + "\"") : "MISS") << "  <- expected hit\n";
+        std::cout << "  Immediate get (session): "
+               << (v ? ("\"" + *v + "\"") : "MISS") << "  <- expected hit\n";
     v = cache.get("config");
-    std::cout << "  Immediate get (config) : "
-              << (v ? ("\"" + *v + "\"") : "MISS") << "  <- expected hit\n\n";
+    std::cout << "  Immediate get (config): "
+               << (v ? ("\"" + *v + "\"") : "MISS") << "  <- expected hit\n\n";
 
     std::cout << "  Sleeping 2.1 seconds...\n";
     std::this_thread::sleep_for(std::chrono::milliseconds(2100));
 
     v = cache.get("session");
-    std::cout << "\n  After 2.1s (session)  : "
-              << (v ? ("\"" + *v + "\"") : "EXPIRED -- MISS") << "  <- TTL evicted\n";
+    std::cout << "\n  After 2.1s (session): "
+               << (v ? ("\"" + *v + "\"") : "EXPIRED -- MISS") << "  <- TTL evicted\n";
     v = cache.get("config");
-    std::cout << "  After 2.1s (config)   : "
-              << (v ? ("\"" + *v + "\"") : "MISS") << "  <- still alive\n";
+    std::cout << "  After 2.1s (config): "
+               << (v ? ("\"" + *v + "\"") : "MISS") << "  <- still alive\n";
 
     std::cout << "\n  TTL expirations logged: " << cache.stats().ttl_expired << "\n";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  main
-// ─────────────────────────────────────────────────────────────────────────────
+// main
 int main() {
     print_banner();
 
     while (true) {
         std::cout
             << "  MAIN MENU\n"
-            << "  ──────────────────────────────────────────────────────\n"
-            << "  1.  Run Benchmark        (Sequential / Random / Hotspot)\n"
-            << "  2.  Custom Benchmark     (choose your own settings)\n"
-            << "  3.  Interactive Mode     (manual put / get)\n"
-            << "  4.  TTL Expiry Demo      (watch an entry expire)\n"
+            << "  --------------------------------------------\n"
+            << "  1.  Run Benchmark\n"
+            << "  2.  Custom Benchmark\n"
+            << "  3.  Interactive Mode\n"
+            << "  4.  TTL Expiry Demo\n"
             << "  5.  Exit\n"
-            << "  ──────────────────────────────────────────────────────\n"
+            << "  --------------------------------------------\n"
             << "  Choice: ";
 
         int choice = 0;

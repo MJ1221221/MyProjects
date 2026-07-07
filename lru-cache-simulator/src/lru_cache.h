@@ -1,23 +1,4 @@
-/*
- * lru_cache.h
- *
- * Core LRU Cache — built from scratch using three data structures:
- *
- *   1. unordered_map<string, CacheNode*>
- *        → O(1) lookup by key
- *
- *   2. Doubly Linked List (DLL)
- *        [HEAD] <-> [MRU] <-> ... <-> [LRU] <-> [TAIL]
- *        → O(1) move-to-front on every access (marks as most recently used)
- *        → O(1) evict from tail  (removes least recently used)
- *
- *   3. Min-Heap keyed on expiry_ms
- *        → efficiently finds the soonest-to-expire entry
- *        → lazy deletion: stale heap entries are skipped when they surface
- *
- * put() returns the evicted {key, value} pair so MultiLevelCache can
- * demote it to L2 instead of permanently losing the entry.
- */
+// Core LRU Cache - built from scratch using HashMap + DLL + Min-Heap
 
 #pragma once
 
@@ -28,9 +9,7 @@
 #include <utility>
 #include <chrono>
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  CacheNode  –  one node in the doubly linked list
-// ─────────────────────────────────────────────────────────────────────────────
+// CacheNode - one node in the doubly linked list
 struct CacheNode {
     std::string key;
     std::string value;
@@ -43,9 +22,7 @@ struct CacheNode {
           expiry_ms(exp), prev(nullptr), next(nullptr) {}
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  LRUCache
-// ─────────────────────────────────────────────────────────────────────────────
+// LRUCache
 class LRUCache {
 public:
 
@@ -78,11 +55,7 @@ public:
     LRUCache(const LRUCache&)            = delete;
     LRUCache& operator=(const LRUCache&) = delete;
 
-    // ─────────────────────────────────────────────────────────────────
-    //  GET
-    //    O(1) lookup + O(1) move-to-front.
-    //    Returns nullopt if key is absent or TTL has elapsed.
-    // ─────────────────────────────────────────────────────────────────
+    // GET - O(1) lookup + move-to-front
     std::optional<std::string> get(const std::string& key) {
         purge_expired();
 
@@ -107,12 +80,7 @@ public:
         return node->value;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    //  PUT
-    //    Inserts or refreshes a key. ttl_ms=0 means never expires.
-    //    Returns the LRU-evicted {key, value} if capacity overflowed,
-    //    so the caller (MultiLevelCache) can demote it to L2.
-    // ─────────────────────────────────────────────────────────────────
+    // PUT - returns evicted {key, val} so caller can demote to L2
     std::optional<std::pair<std::string, std::string>>
     put(const std::string& key, const std::string& value, long long ttl_ms = 0) {
         purge_expired();
@@ -120,7 +88,7 @@ public:
         long long expiry = ttl_ms > 0 ? now_ms() + ttl_ms : 0LL;
 
         if (auto it = map_.find(key); it != map_.end()) {
-            // Key already present → update and refresh position
+            // Key already present -> update and refresh
             CacheNode* node = it->second;
             node->value     = value;
             node->expiry_ms = expiry;
@@ -149,10 +117,7 @@ public:
         return std::nullopt;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    //  PEEK  –  read without changing recency order.
-    //  Used by MultiLevelCache to check L2 without disturbing its order.
-    // ─────────────────────────────────────────────────────────────────
+    // PEEK - read without changing recency order
     std::optional<std::string> peek(const std::string& key) const {
         auto it = map_.find(key);
         if (it == map_.end())       return std::nullopt;
@@ -160,9 +125,7 @@ public:
         return it->second->value;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    //  REMOVE  –  explicit delete (called during L2 → L1 promotion)
-    // ─────────────────────────────────────────────────────────────────
+    // REMOVE - explicit delete (called during L2 -> L1 promotion)
     void remove(const std::string& key) {
         auto it = map_.find(key);
         if (it == map_.end()) return;
@@ -191,7 +154,7 @@ private:
 
     std::unordered_map<std::string, CacheNode*> map_;
 
-    // Min-heap: {expiry_ms, key} — smallest expiry at top
+    // Min-heap - smallest expiry at top
     using TTLEntry = std::pair<long long, std::string>;
     std::priority_queue<TTLEntry,
                         std::vector<TTLEntry>,
